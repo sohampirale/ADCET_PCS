@@ -1,0 +1,175 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+enum Roles {
+  Student
+  Mentor
+}
+
+enum Genders {
+  Male
+  Female
+}
+
+enum LikeOfType {
+  EPortfolio
+  HandmadePortfolio
+  Event
+}
+
+model User {
+  id                 String              @id @default(cuid())
+  email              String              @unique
+  URN                String?             @unique
+  username           String?             @unique
+  password           String?
+  role               Roles?
+  gender             Genders?
+  ePortfolios        EPortfolio[]        @relation("UserEPortfolio")
+  handmadePortfolios HandmadePortfolio[] @relation("UserHandmadePortfolio")
+
+  name          String?
+  image         String?
+  emailVerified DateTime?
+
+  mentees  User[]  @relation("MentorMentee")
+  mentorId String?
+  mentor   User?   @relation("MentorMentee", fields: [mentorId], references: [id])
+
+  mentoredEvents Event[]            @relation("MentorEvent")
+  coordinator    EventCoordinator[] @relation("UserToCoordinator")
+
+  sessions Session[]
+  accounts Account[]
+
+  givenLikes Like[] @relation("Liked_By_User")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+}
+
+model EPortfolio {
+  id      String @id @default(cuid())
+  title   String @default("My E-Portfolio")
+  link    String
+  ownerId String
+  owner   User   @relation("UserEPortfolio", fields: [ownerId], references: [id])
+
+  likes Like[] @relation("E_Portfolio_Like")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@index([ownerId])
+}
+
+model HandmadePortfolio {
+  id      String   @id @default(cuid())
+  title   String   @default("My Handmade Portfolio")
+  images  String[]
+  ownerId String
+  owner   User     @relation("UserHandmadePortfolio", fields: [ownerId], references: [id])
+
+  likes Like[] @relation("Handmade_Portfolio_Like")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@index([ownerId])
+}
+
+model Event {
+  id           String             @id @default(cuid())
+  title        String
+  mentorId     String
+  mentor       User               @relation("MentorEvent", fields: [mentorId], references: [id])
+  coordinators EventCoordinator[]
+
+  likes Like[] @relation("Event_Like")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@index([mentorId])
+}
+
+model EventCoordinator {
+  id            String @id @default(cuid())
+  eventId       String
+  coordinatorId String
+
+  event       Event @relation(fields: [eventId], references: [id])
+  coordinator User  @relation("UserToCoordinator", fields: [coordinatorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@unique([eventId, coordinatorId])
+}
+
+model Like {
+  id String @id @default(cuid())
+
+  ownerId String
+  owner   User   @relation("Liked_By_User", fields: [ownerId], references: [id])
+
+  type LikeOfType
+
+  ePortfolioId String?
+  ePortfolio   EPortfolio? @relation("E_Portfolio_Like", fields: [ePortfolioId], references: [id])
+
+  handmadePortfolioId String?
+  handmadePortfolio   HandmadePortfolio? @relation("Handmade_Portfolio_Like", fields: [handmadePortfolioId], references: [id])
+
+  eventId String?
+  event   Event?  @relation("Event_Like", fields: [eventId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+}

@@ -1,8 +1,8 @@
 import {signIn,signOut} from "next-auth/react"
 
-export async function credentialsLogin(email:string,password:string){
+export async function credentialsLogin(identifier:string,password:string){
     const res=await signIn("credentials",{
-        email,password,redirect:true,
+        identifier,password,redirect:false,
         callbackUrl:"/"
     })
     return res;

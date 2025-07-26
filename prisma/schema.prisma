@@ -50,6 +50,7 @@ model VerificationToken {
 enum Roles {
   Student
   Mentor
+  NOT_SET
 }
 
 enum Genders {
@@ -69,10 +70,14 @@ model User {
   URN                String?             @unique
   username           String?             @unique
   password           String?
-  role               Roles?
+  role               Roles?        
   gender             Genders?
   ePortfolios        EPortfolio[]        @relation("UserEPortfolio")
+  mentorOfEPortfolios EPortfolio[] @relation("MentorEPortfolio")
+  
   handmadePortfolios HandmadePortfolio[] @relation("UserHandmadePortfolio")
+  mentorOfHandmadePortfolios HandmadePortfolio[]  @relation("MentorHandmadePortfolio")
+  uploadedImages ImageOwner[]
 
   name          String?
   image         String?
@@ -90,16 +95,19 @@ model User {
 
   givenLikes Like[] @relation("Liked_By_User")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @default(now())
 }
 
 model EPortfolio {
-  id      String @id @default(cuid())
-  title   String @default("My E-Portfolio")
-  link    String
-  ownerId String
-  owner   User   @relation("UserEPortfolio", fields: [ownerId], references: [id])
+  id       String  @id @default(cuid())
+  title    String  @default("My E-Portfolio")
+  link     String
+  ownerId  String
+  mentorId String?
+
+  owner  User @relation("UserEPortfolio", fields: [ownerId], references: [id])
+  mentor User? @relation("MentorEPortfolio", fields: [mentorId], references: [id])
 
   likes Like[] @relation("E_Portfolio_Like")
 
@@ -114,7 +122,10 @@ model HandmadePortfolio {
   title   String   @default("My Handmade Portfolio")
   images  String[]
   ownerId String
+  mentorId String?
+
   owner   User     @relation("UserHandmadePortfolio", fields: [ownerId], references: [id])
+  mentor User? @relation("MentorHandmadePortfolio",fields: [mentorId],references: [id])
 
   likes Like[] @relation("Handmade_Portfolio_Like")
 
@@ -131,6 +142,10 @@ model Event {
   mentor       User               @relation("MentorEvent", fields: [mentorId], references: [id])
   coordinators EventCoordinator[]
 
+  images String[]
+  videos String[]
+  thumbnail String?
+  description String
   likes Like[] @relation("Event_Like")
 
   createdAt DateTime @default(now())
@@ -143,6 +158,7 @@ model EventCoordinator {
   id            String @id @default(cuid())
   eventId       String
   coordinatorId String
+  credit        String
 
   event       Event @relation(fields: [eventId], references: [id])
   coordinator User  @relation("UserToCoordinator", fields: [coordinatorId], references: [id])
@@ -150,7 +166,16 @@ model EventCoordinator {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 
-  @@unique([eventId, coordinatorId])
+  @@unique([eventId, coordinatorId,credit])
+}
+
+model ImageOwner{
+  id String @id @default(cuid())
+  public_id String 
+  ownerId String
+  owner User @relation(fields: [ownerId],references: [id])
+
+  @@unique([ownerId,public_id])
 }
 
 model Like {
@@ -172,4 +197,9 @@ model Like {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
+
+  @@unique([ownerId,ePortfolioId])
+  @@unique([ownerId,handmadePortfolioId])
+  @@unique([ownerId,eventId])
+
 }
